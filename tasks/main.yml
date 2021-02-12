@@ -8,3 +8,11 @@
     loop_var: igw
   with_items:
     - "{{ aws_vpc_igws }}"
+  when: aws_vpc_igws_state == "present"
+
+- include_tasks: delete_vpc_igw.yml
+  loop_control:
+    loop_var: igw
+  with_items:
+    - "{{ aws_vpc_igws }}"
+  when: aws_vpc_igws_state == "absent"

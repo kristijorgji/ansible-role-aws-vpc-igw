@@ -1,0 +1,48 @@
+---
+
+# Assert that required name element is present
+- name: ensure vpc_igw array contains name key
+  assert:
+    that:
+      - igw.name is defined
+      - igw.name | length > 0
+    msg: "aws_vpc_igws[x].name is not defined, but required"
+
+# Assert that required vpc_filter element is present
+- name: ensure vpc_igw array contains vpc_name xor vpc_filter key
+  assert:
+    that:
+      - igw.vpc_filter is defined or igw.vpc_name is defined
+      - not (igw.vpc_filter is defined and igw.vpc_name is defined)
+    msg: "aws_vpc_igws[x].vpc_filter or .vpc_name is not defined, but required to lookup vpc"
+
+
+# Returns:
+# * _vpc_igw_vpc
+- include_tasks: gather_facts_vpc_by_filter.yml
+  when:
+    - igw.vpc_filter is defined
+
+# Returns:
+# * _vpc_igw_vpc
+- include_tasks: gather_facts_vpc_by_name.yml
+  when:
+    - igw.vpc_name is defined
+
+- name: fail if vpc was not found
+  assert:
+    that:
+      - _vpc_igw_vpc.vpcs is defined
+      - _vpc_igw_vpc.vpcs | length == 1
+    msg: Not exactly one VPC has been found
+  when: aws_vpc_igws_state == "present"
+
+- name: set vpc id
+  set_fact:
+    aws_vpc_igw_vpc_id: "{{ _vpc_igw_vpc.vpcs[0].id }}"
+  when: _vpc_igw_vpc.vpcs | length > 0
+
+- name: set vpc cidr
+  set_fact:
+    aws_vpc_igw_vpc_cidr: "{{ _vpc_igw_vpc.vpcs[0].cidr_block }}"
+  when: _vpc_igw_vpc.vpcs | length > 0
